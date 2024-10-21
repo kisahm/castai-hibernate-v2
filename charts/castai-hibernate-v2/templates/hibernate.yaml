@@ -1,0 +1,40 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "{{ .Release.Name }}-{{ .Values.hibernate.suffix }}"
+  namespace: {{ .Values.namespace }}
+spec:
+  schedule: "{{ .Values.hibernate.schedule }}"
+  concurrencyPolicy: {{ .Values.concurrencyPolicy }}
+  {{- if and .Values.timeZone (semverCompare ">=1.25-0" .Capabilities.KubeVersion.GitVersion) }}
+  timeZone: {{ .Values.timeZone }}
+  {{- end }}
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: {{ .Values.hibernate.ttlSecondsAfterFinished }}
+      template:
+        spec:
+          securityContext: {{ .Values.podSecurityContext | toYaml | nindent 12 }} 
+          tolerations:
+          - key: "scheduling.cast.ai/paused-cluster"
+            operator: Exists
+          containers:
+          - name: hibernate
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.Version }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            securityContext:
+              readOnlyRootFilesystem: true       
+            env:
+              - name: CASTAI_API_URL
+                value: "{{ .Values.apiUrl }}"
+              - name: CASTAI_API_KEY
+                value: "{{ .Values.apiKey }}"
+              - name: CASTAI_CLUSTER_ID
+                value: "{{ .Values.clusterId }}"
+              - name: CASTAI_HIBERNATE_ACTION
+                value: "hibernate"
+              - name: DEBUG
+                value: "{{ .Values.debug }}"
+          restartPolicy: {{ .Values.restartPolicy }}
+      backoffLimit: {{ .Values.backoffLimit }}

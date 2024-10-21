@@ -1,0 +1,39 @@
+---
+apiUrl: "https://api.cast.ai"
+apiKey: ""
+clusterid: ""
+timeZone: ""
+namespace: castai-agent
+concurrencyPolicy: "Forbid"
+restartPolicy: "OnFailure"
+backoffLimit: 0
+debug: false
+
+podSecurityContext:
+  runAsNonRoot: true
+  fsGroup: 1003
+  runAsGroup: 1003
+  runAsUser: 1003
+
+image:
+  repository: kisahm/castai-hibernate-v2
+  tag: ""
+  pullPolicy: Always
+
+hibernate:
+  suffix: hibernate
+  schedule: "0 22 * * 1-5"
+  ttlSecondsAfterFinished: 300
+resume:
+  suffix: "resume"
+  schedule: "0 7 * * 1-5"
+  instanceType: "c5a.large"
+  ttlSecondsAfterFinished: 300
+  final:
+    retries: 10
+    delay: 30
+  spot:
+    enabled: false
+    retries: 10
+    delay: 30
+  

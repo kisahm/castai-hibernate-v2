@@ -1,0 +1,53 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "{{ .Release.Name }}-{{ .Values.resume.suffix }}"
+  namespace: {{ .Values.namespace }}
+spec:
+  schedule: "{{ .Values.resume.schedule }}"
+  concurrencyPolicy: {{ .Values.concurrencyPolicy }}
+  {{- if and .Values.timeZone (semverCompare ">=1.25-0" .Capabilities.KubeVersion.GitVersion) }}
+  timeZone: {{ .Values.timeZone }}
+  {{- end }}
+  jobTemplate:
+     spec:
+      ttlSecondsAfterFinished: {{ .Values.resume.ttlSecondsAfterFinished }}
+      template:
+        spec:
+          securityContext: {{ .Values.podSecurityContext | toYaml | nindent 12 }}
+          priorityClassName: system-cluster-critical
+          tolerations:
+          - key: "scheduling.cast.ai/paused-cluster"
+            operator: Exists
+          containers:
+          - name: resume
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.Version }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            securityContext:
+              readOnlyRootFilesystem: true   
+            env:
+              - name: CASTAI_API_URL
+                value: "{{ .Values.apiUrl }}"
+              - name: CASTAI_API_KEY
+                value: "{{ .Values.apiKey }}"
+              - name: CASTAI_CLUSTER_ID
+                value: "{{ .Values.clusterId }}"
+              - name: CASTAI_HIBERNATE_ACTION
+                value: "resume"
+              - name: CASTAI_RESUME_FINAL_RETRIES
+                value: "{{ .Values.resume.final.retries}}"
+              - name: CASTAI_RESUME_FINAL_DELAY
+                value: "{{ .Values.resume.final.delay}}"
+              - name: CASTAI_RESUME_INSTANCE_TYPE
+                value: "{{ .Values.resume.instanceType}}"
+              - name: CASTAI_RESUME_SPOT_INSTANCE
+                value: "{{ .Values.resume.spot.enabled}}"
+              - name: CASTAI_RESUME_SPOT_RETRIES
+                value: "{{ .Values.resume.spot.retries}}"
+              - name: CASTAI_RESUME_SPOT_DELAY
+                value: "{{ .Values.resume.spot.delay}}"
+              - name: DEBUG
+                value: "{{ .Values.debug }}"
+          restartPolicy: {{ .Values.restartPolicy }}
+      backoffLimit: {{ .Values.backoffLimit }}
